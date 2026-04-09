@@ -5,12 +5,13 @@ services:
       dockerfile: Dockerfile
     container_name: stark-teaching-app
     ports:
-      - "3300:3000"
+      - "${APP_BIND_IP:-127.0.0.1}:${APP_HOST_PORT:-3300}:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
-      TZ: Asia/Shanghai
-      FRONTEND_URL: http://localhost:3300
+      TZ: ${TZ:-Asia/Shanghai}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3300}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       JWT_SECRET: ${JWT_SECRET:-replace-this-in-production}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123456}
@@ -18,6 +19,12 @@ services:
       - stark_app_storage:/app/storage
     shm_size: "1gb"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((res)=>process.exit(res.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
 volumes:
   stark_app_storage:
