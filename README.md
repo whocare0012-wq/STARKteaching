@@ -77,7 +77,7 @@ docker compose logs -f
 - 如果更换服务器，只要迁移这个 volume 对应的数据即可保留系统数据。
 - 如果服务器开启了防火墙，需要放行你设置的对外端口。
 - 如果要长期公网使用，推荐给站点加 Nginx 或 Caddy 反向代理，并启用 HTTPS。
-- 如果服务器上已经有其它网站，推荐使用二级域名，例如 `score.starkbcy.cn`，并把容器绑定到 `127.0.0.1:3300`，再通过 Nginx 按域名转发到这个端口。
+- 如果服务器上已经有其它网站，推荐使用二级域名，例如 `score.baidu.cn`，并把容器绑定到 `127.0.0.1:3300`，再通过 Nginx 按域名转发到这个端口。
 
 ### 适合你当前服务器的做法
 
@@ -86,7 +86,7 @@ docker compose logs -f
 ```env
 APP_BIND_IP=127.0.0.1
 APP_HOST_PORT=3300
-FRONTEND_URL=http://score.starkbcy.cn
+FRONTEND_URL=http://score.baidu.cn
 COOKIE_SECURE=false
 TZ=Asia/Shanghai
 JWT_SECRET=请替换成一段足够长的随机字符串
@@ -99,7 +99,7 @@ Nginx 反向代理示例：
 ```nginx
 server {
     listen 80;
-    server_name score.starkbcy.cn;
+    server_name score.baidu.cn;
 
     location / {
         proxy_pass http://127.0.0.1:3300;
