@@ -10,6 +10,9 @@ FROM mcr.microsoft.com/playwright:v1.59.1-jammy AS runtime
 
 WORKDIR /app/backend
 COPY backend/package*.json ./
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends build-essential python3 \
+  && rm -rf /var/lib/apt/lists/*
 RUN npm ci --omit=dev
 COPY backend/ ./
 
