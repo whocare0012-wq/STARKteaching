@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STARK编程营 · 教师授课互评表</title>
+    <!-- 引入 Tailwind CSS 进行快速现代化排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Vue 3 进行数据驱动与交互 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        /* 自定义滚动条和一些基础样式 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        body { font-family: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
+
+        /* 打印专用样式 */
+        @media print {
+            body { background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .print-shadow-none { box-shadow: none !important; border: 1px solid #e5e7eb !important; margin-bottom: 20px !important; }
+            .page-break-inside-avoid { page-break-inside: avoid; }
+            input, textarea, select { border: 1px solid #d1d5db !important; background: transparent !important; }
+            /* 隐藏滑块本身，只打印数字和条纹背景 */
+            input[type=range] { display: none; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen py-8">
+
+    <div id="app" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- 顶部操作栏 -->
+        <div class="no-print flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+            <div class="text-slate-500 text-sm flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                数据实时自动计算，打印时自动优化排版
+            </div>
+            <div class="space-x-3">
+                <button @click="resetForm" class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+                    清空重置
+                </button>
+                <button @click="printPage" class="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 rounded-lg transition-all flex items-center inline-flex gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    打印 / 另存PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- 表单主体 -->
+        <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-8 sm:p-12 print-shadow-none border border-slate-100">
+            
+            <!-- 表头 -->
+            <div class="text-center mb-10 border-b border-slate-200 pb-8">
+                <h1 class="text-3xl font-bold text-slate-800 tracking-wider mb-2">少儿编程教研组 · 教师授课互评表</h1>
+            </div>
+
+            <!-- 第一部分：基础信息 -->
+            <section class="mb-10 page-break-inside-avoid">
+                <h2 class="text-lg font-bold text-blue-700 flex items-center gap-2 mb-6 border-l-4 border-blue-500 pl-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    基础信息
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 bg-slate-50 p-6 rounded-xl border border-slate-100">
+                    
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-600">授课教师</label>
+                        <input v-model="info.teacher" type="text" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border outline-none transition-colors" placeholder="输入教师姓名">
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-600">评分人及身份</label>
+                        <div class="flex gap-3">
+                            <input v-model="info.evaluator" type="text" class="flex-1 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border outline-none" placeholder="输入评分人姓名">
+                            <select v-model="info.role" class="w-1/3 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border outline-none bg-white">
+                                <option value="">选择身份</option>
+                                <option value="教师">教师</option>
+                                <option value="教学主管">教学主管</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-600">授课课题</label>
+                        <input v-model="info.topic" type="text" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border outline-none" placeholder="如：Python循环语句的应用">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-600">编程语言</label>
+                        <div class="flex items-center gap-4 h-[42px]">
+                            <label class="inline-flex items-center cursor-pointer hover:text-blue-600">
+                                <input type="radio" v-model="info.language" value="Scratch" class="form-radio text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                <span class="ml-2 text-sm">Scratch</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer hover:text-blue-600">
+                                <input type="radio" v-model="info.language" value="Python" class="form-radio text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                <span class="ml-2 text-sm">Python</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer hover:text-blue-600">
+                                <input type="radio" v-model="info.language" value="C++" class="form-radio text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                <span class="ml-2 text-sm">C++</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer hover:text-blue-600">
+                                <input type="radio" v-model="info.language" value="其他" class="form-radio text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                <span class="ml-2 text-sm">其他</span>
+                                <input v-if="info.language === '其他'" v-model="info.otherLanguage" type="text" class="ml-2 w-20 border-b border-gray-400 focus:border-blue-500 outline-none text-sm bg-transparent px-1" placeholder="请填写">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-600">授课日期</label>
+                        <input v-model="info.date" type="date" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 border outline-none text-slate-700 bg-white">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-sm font-medium text-slate-600">授课轮次/时间</label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-slate-500">第</span>
+                            <input v-model="info.round" type="number" min="1" class="w-20 text-center border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-2 border outline-none">
+                            <span class="text-sm text-slate-500">轮次 (30分钟)</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 第二部分：评价细则 -->
+            <section class="mb-10">
+                <div class="flex justify-between items-end mb-6 border-l-4 border-indigo-500 pl-3">
+                    <h2 class="text-lg font-bold text-indigo-700 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        评价量表
+                    </h2>
+                    <div class="text-sm font-bold bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-100">
+                        当前总分：<span class="text-xl">{{ totalScore }}</span> / 100
+                    </div>
+                </div>
+
+                <div class="overflow-hidden border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse bg-white">
+                        <thead>
+                            <tr class="bg-slate-50 text-sm text-slate-600 border-b border-slate-200">
+                                <th class="py-4 px-4 font-semibold w-1/5">评价维度</th>
+                                <th class="py-4 px-4 font-semibold w-2/5">评价指标及细则</th>
+                                <th class="py-4 px-4 font-semibold w-2/5 text-center">打分操作 (满分见标注)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <!-- 循环渲染评分项 -->
+                            <tr v-for="(item, index) in criteria" :key="index" class="hover:bg-slate-50/50 transition-colors page-break-inside-avoid">
+                                <td class="py-4 px-4 align-top">
+                                    <div class="font-bold text-slate-800 text-base" v-html="item.title.replace('<br>', ' ')"></div>
+                                </td>
+                                <td class="py-4 px-4 align-top text-slate-600 text-sm leading-relaxed">
+                                    {{ item.desc }}
+                                </td>
+                                <td class="py-4 px-4 align-middle">
+                                    <div class="flex items-center justify-between gap-4">
+                                        <div class="flex-1 no-print">
+                                            <input type="range" v-model.number="item.score" min="0" :max="item.max" step="1" 
+                                                   class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                                            <div class="flex justify-between text-xs text-slate-400 mt-1">
+                                                <span>0</span>
+                                                <span>{{ item.max }}分</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" v-model.number="item.score" min="0" :max="item.max" 
+                                                   class="w-16 h-10 text-center font-bold text-lg text-indigo-600 border-2 border-indigo-100 rounded-lg focus:border-indigo-500 focus:ring-0 outline-none bg-indigo-50/30">
+                                            <span class="text-slate-400 text-sm font-medium whitespace-nowrap">/{{ item.max }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 第三部分：评语与建议 -->
+            <section class="mb-12 page-break-inside-avoid">
+                <h2 class="text-lg font-bold text-emerald-600 flex items-center gap-2 mb-6 border-l-4 border-emerald-500 pl-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                    评课反馈
+                </h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label class="flex items-center font-medium text-slate-700 mb-2 gap-2">
+                            <span class="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded text-xs font-bold">优点</span>
+                            【核心亮点 / 值得学习的地方】
+                        </label>
+                        <textarea v-model="feedback.highlights" rows="3" class="w-full border-gray-300 rounded-xl shadow-sm focus:border-emerald-500 focus:ring-emerald-500 px-4 py-3 border outline-none text-sm text-slate-700 bg-emerald-50/30" placeholder="记录讲师的出彩之处..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center font-medium text-slate-700 mb-2 gap-2">
+                            <span class="bg-amber-100 text-amber-600 px-2 py-0.5 rounded text-xs font-bold">建议</span>
+                            【改进建议】
+                            <span class="text-xs text-slate-400 font-normal ml-auto">(结合逻辑优化、切入点、学生易错点)</span>
+                        </label>
+                        <textarea v-model="feedback.suggestions" rows="4" class="w-full border-gray-300 rounded-xl shadow-sm focus:border-amber-500 focus:ring-amber-500 px-4 py-3 border outline-none text-sm text-slate-700 bg-amber-50/30" placeholder="记录需要优化和改进的具体建议..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 底部签名区 -->
+            <section class="mt-16 pt-8 border-t-2 border-dashed border-slate-200 page-break-inside-avoid">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-8 px-4">
+                    
+                    <!-- 动态徽章展示总分等级 -->
+                    <div class="flex items-center gap-4">
+                        <div class="text-slate-500 font-medium">综合得分：</div>
+                        <div class="text-4xl font-black" :class="scoreColorClass">{{ totalScore }}</div>
+                        <div v-if="totalScore > 0" class="px-3 py-1 text-sm font-bold rounded-full border border-current" :class="scoreColorClass">
+                            {{ scoreLevelText }}
+                        </div>
+                    </div>
+
+                    <div class="flex gap-10 items-end">
+                        <div class="flex flex-col gap-2">
+                            <span class="text-slate-500 text-sm">评分人签字：</span>
+                            <div class="w-40 border-b-2 border-slate-800 h-8"></div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-slate-500 text-sm">日期：</span>
+                            <div class="w-40 border-b border-slate-400 h-8 flex items-end pb-1 px-2 font-medium text-slate-700">
+                                {{ info.date || '2026 年    月    日' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+        
+        <!-- 页脚小提示 -->
+        <p class="text-center text-slate-400 text-sm mt-8 no-print pb-8">
+            设计用于现代化教研管理，支持网页直接填写后打印存档
+        </p>
+    </div>
+
+    <!-- Vue 应用逻辑 -->
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // 基础信息
+                const info = ref({
+                    teacher: '',
+                    evaluator: '',
+                    role: '',
+                    topic: '',
+                    language: '',
+                    otherLanguage: '',
+                    date: '', // 默认可以用 new Date() 初始化，此处为了匹配要求先留空
+                    round: ''
+                });
+
+                // 评分细则数据
+                const criteria = ref([
+                    { title: '1. 教学目标明确', desc: '目标设定符合学生认知水平与前置基础，重难点突出，预期学习成果（代码实现/逻辑理解）清晰可衡量。', max: 10, score: 0 },
+                    { title: '2. 内容设计合理', desc: '课程结构完整，知识点拆解细致，难度呈阶梯状递进，案例选材贴近生活且具趣味性。', max: 10, score: 0 },
+                    { title: '3. 语言清晰<br>逻辑顺畅', desc: '发音标准，语速适中；讲解编程逻辑条理分明，能将复杂概念拆解得简单易懂。', max: 10, score: 0 },
+                    { title: '4. 表达儿童化<br>有感染力', desc: '善于运用生动的比喻和故事化场景化解枯燥的技术术语，能吸引学生注意力。', max: 10, score: 0 },
+                    { title: '5. 互动设计有效', desc: '提问具有启发性，能有效引导学生推导代码逻辑；关注全员参与度，给予及时且正向的反馈。', max: 20, score: 0 },
+                    { title: '6. 编程知识准确', desc: '专业功底扎实，代码逻辑与语法规范正确无误（含代码缩进、命名习惯）；能精准剖析算法思想或程序底层原理。', max: 20, score: 0 },
+                    { title: '7. 示范与任务<br>引导清楚', desc: '现场编写代码演示过程步骤清晰、操作熟练；课堂任务或挑战布置指令明确，学生能立刻知道要做什么、怎么做。', max: 10, score: 0 },
+                    { title: '8. 节奏与时间控制', desc: '各环节时间分配合理，教学节奏紧凑，无严重拖堂或提前结束现象。', max: 10, score: 0 }
+                ]);
+
+                // 评语
+                const feedback = ref({
+                    highlights: '',
+                    suggestions: ''
+                });
+
+                // 计算总分
+                const totalScore = computed(() => {
+                    return criteria.value.reduce((sum, item) => sum + (item.score || 0), 0);
+                });
+
+                // 动态颜色评价
+                const scoreColorClass = computed(() => {
+                    const s = totalScore.value;
+                    if (s === 0) return 'text-slate-300 border-slate-300';
+                    if (s < 70) return 'text-rose-500 border-rose-500';
+                    if (s < 80) return 'text-amber-500 border-amber-500';
+                    if (s < 90) return 'text-blue-500 border-blue-500';
+                    return 'text-emerald-500 border-emerald-500';
+                });
+
+                // 评价等级文字
+                const scoreLevelText = computed(() => {
+                    const s = totalScore.value;
+                    if (s === 0) return '未打分';
+                    if (s < 70) return '需改进';
+                    if (s < 80) return '合格';
+                    if (s < 90) return '良好';
+                    return '优秀';
+                });
+
+                // 方法：清空表单
+                const resetForm = () => {
+                    if(confirm('确定要清空所有已填入的数据吗？')) {
+                        info.value = { teacher: '', evaluator: '', role: '', topic: '', language: '', otherLanguage: '', date: '', round: '' };
+                        feedback.value = { highlights: '', suggestions: '' };
+                        criteria.value.forEach(item => item.score = 0);
+                    }
+                };
+
+                // 方法：打印页面
+                const printPage = () => {
+                    window.print();
+                };
+
+                return {
+                    info,
+                    criteria,
+                    feedback,
+                    totalScore,
+                    scoreColorClass,
+                    scoreLevelText,
+                    resetForm,
+                    printPage
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
