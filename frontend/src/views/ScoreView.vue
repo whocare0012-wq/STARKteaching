@@ -64,7 +64,7 @@
       <section class="score-section">
         <div class="score-section-head">
           <h2>评分量表</h2>
-          <div class="score-total">当前总分：<strong>{{ totalScore }}</strong> / 100</div>
+          <div class="score-total">当前总分：<strong>{{ totalScore }}</strong> / {{ totalMaxScore }}</div>
         </div>
 
         <div class="score-table-wrap">
@@ -143,7 +143,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { defaultCriteria } from '../constants/criteria'
 import { getScoreSheetContext, submitScore } from '../lib/api'
 import { authState, loadSession } from '../lib/auth'
 
@@ -168,16 +167,32 @@ const createEmptyForm = (date = '', round = '') => ({
 })
 
 const form = reactive(createEmptyForm())
-const criteria = ref(defaultCriteria.map((item) => ({ ...item })))
+const criteriaTemplate = ref([])
+const criteria = ref([])
+
+function cloneCriteria(items = []) {
+  return items.map((item) => ({
+    title: item.title,
+    desc: item.desc,
+    max: Number(item.max || 0),
+    score: Number(item.score || 0),
+  }))
+}
 
 const totalScore = computed(() =>
   criteria.value.reduce((sum, item) => sum + Number(item.score || 0), 0),
 )
 
+const totalMaxScore = computed(() =>
+  criteria.value.reduce((sum, item) => sum + Number(item.max || 0), 0),
+)
+
 const scoreLevelText = computed(() => {
-  if (totalScore.value >= 90) return '优秀'
-  if (totalScore.value >= 80) return '良好'
-  if (totalScore.value >= 70) return '合格'
+  const ratio = totalMaxScore.value > 0 ? totalScore.value / totalMaxScore.value : 0
+
+  if (ratio >= 0.9) return '优秀'
+  if (ratio >= 0.8) return '良好'
+  if (ratio >= 0.7) return '合格'
   if (totalScore.value > 0) return '需改进'
   return '未打分'
 })
@@ -191,7 +206,7 @@ const displayDate = computed(() => {
 
 function resetForm(clearMessage = true) {
   Object.assign(form, createEmptyForm(authState.today, authState.lesson?.currentRound || lesson.currentRound || ''))
-  criteria.value = defaultCriteria.map((item) => ({ ...item }))
+  criteria.value = cloneCriteria(criteriaTemplate.value)
   if (clearMessage) {
     message.text = ''
   }
@@ -204,6 +219,8 @@ async function loadContext() {
   lesson.currentTopic = data.lesson.currentTopic
   lesson.currentSubject = data.lesson.currentSubject
   lesson.currentRound = data.lesson.currentRound
+  criteriaTemplate.value = cloneCriteria(data.criteria || [])
+  criteria.value = cloneCriteria(criteriaTemplate.value)
   form.lessonDate = data.today
   form.round = data.lesson.currentRound || ''
 }

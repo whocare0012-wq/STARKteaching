@@ -75,6 +75,16 @@ const lessonSettingsSchema = z
     }
   });
 
+const criteriaConfigItemSchema = z.object({
+  title: z.string().trim().min(1, '请填写评分细则标题'),
+  desc: z.string().trim().min(1, '请填写评分细则说明'),
+  max: z.number().int().positive('评分满分必须大于 0'),
+});
+
+const criteriaConfigSchema = z
+  .array(criteriaConfigItemSchema)
+  .min(1, '至少保留一条评分细则');
+
 const createUserSchema = z.object({
   username: z
     .string()
@@ -94,6 +104,7 @@ const updateUserSchema = z.object({
 });
 
 module.exports = {
+  criteriaConfigSchema,
   createUserSchema,
   lessonSettingsSchema,
   loginSchema,

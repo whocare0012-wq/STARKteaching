@@ -13,7 +13,11 @@ function renderSnapshotHtml(submission) {
     (sum, item) => sum + Number(item.score || 0),
     0,
   );
-  const level = getScoreLevel(totalScore);
+  const totalMaxScore = submission.criteria.reduce(
+    (sum, item) => sum + Number(item.max || 0),
+    0,
+  );
+  const level = getScoreLevel(totalScore, totalMaxScore);
 
   const criteriaRows = submission.criteria
     .map(
@@ -191,6 +195,7 @@ function renderSnapshotHtml(submission) {
             </div>
             <div class="score-box">
               <strong>${totalScore}</strong>
+              <small style="display:block;margin-top:6px;color:#64748b;font-size:14px;">/ ${totalMaxScore}</small>
               <span>${level.text}</span>
             </div>
           </div>

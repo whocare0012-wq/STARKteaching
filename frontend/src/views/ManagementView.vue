@@ -81,6 +81,57 @@
       </section>
     </div>
 
+    <section class="manage-card">
+      <div class="section-head">
+        <h2>评分细则配置</h2>
+        <span class="muted">管理员可以调整评分条目、说明内容和每条细则满分，评分页会实时使用这里的配置。</span>
+      </div>
+
+      <div class="criteria-config-list">
+        <article
+          v-for="(item, index) in criteriaForm"
+          :key="index"
+          class="criteria-config-item"
+        >
+          <div class="section-head">
+            <strong>细则 {{ index + 1 }}</strong>
+            <button
+              class="btn btn-secondary btn-small"
+              type="button"
+              @click="removeCriterion(index)"
+              :disabled="criteriaForm.length <= 1"
+            >
+              删除
+            </button>
+          </div>
+
+          <div class="score-grid">
+            <div class="field">
+              <label>细则标题</label>
+              <input v-model.trim="item.title" type="text" />
+            </div>
+            <div class="field">
+              <label>该项满分</label>
+              <input v-model.number="item.max" type="number" min="1" step="1" />
+            </div>
+            <div class="field field-full">
+              <label>细则说明</label>
+              <textarea v-model.trim="item.desc" />
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="panel-actions">
+        <button class="btn btn-secondary" type="button" @click="addCriterion">
+          新增细则
+        </button>
+        <button class="btn btn-primary" type="button" @click="saveCriteria" :disabled="savingCriteria">
+          {{ savingCriteria ? '保存中...' : '保存评分细则' }}
+        </button>
+      </div>
+    </section>
+
     <div class="management-grid">
       <section class="manage-card">
         <div class="section-head">
@@ -334,6 +385,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import {
   createUser,
   deleteSubmission,
+  getCriteriaConfig,
   getLessonSettings,
   getSnapshotUrl,
   getSubmission,
@@ -342,6 +394,7 @@ import {
   getSubmissions,
   getSubmissionsExportUrl,
   getUsers,
+  updateCriteriaConfig,
   updateLessonSettings,
   updateUser,
 } from '../lib/api'
@@ -349,6 +402,7 @@ import { loadSession } from '../lib/auth'
 
 const loading = ref(false)
 const savingLesson = ref(false)
+const savingCriteria = ref(false)
 const creatingUser = ref(false)
 const updatingUser = ref(false)
 const deletingSubmission = ref(false)
@@ -366,6 +420,8 @@ const lessonForm = reactive({
   currentRound: '',
   scoringEnabled: false,
 })
+
+const criteriaForm = ref([])
 
 const createForm = reactive({
   username: '',
@@ -406,6 +462,14 @@ function resetCreateForm() {
   createForm.role = 'USER'
 }
 
+function createEmptyCriterion() {
+  return {
+    title: '',
+    desc: '',
+    max: 10,
+  }
+}
+
 function selectUser(user) {
   editingUser.value = user
   editForm.displayName = user.displayName
@@ -420,6 +484,10 @@ async function loadLesson() {
   lessonForm.currentSubject = lesson.currentSubject
   lessonForm.currentRound = lesson.currentRound
   lessonForm.scoringEnabled = Boolean(lesson.scoringEnabled)
+}
+
+async function loadCriteria() {
+  criteriaForm.value = await getCriteriaConfig()
 }
 
 async function loadUsersList() {
@@ -462,6 +530,32 @@ async function saveLesson() {
     setMessage('error', error.message)
   } finally {
     savingLesson.value = false
+  }
+}
+
+function addCriterion() {
+  criteriaForm.value = [...criteriaForm.value, createEmptyCriterion()]
+}
+
+function removeCriterion(index) {
+  criteriaForm.value = criteriaForm.value.filter((_, itemIndex) => itemIndex !== index)
+}
+
+async function saveCriteria() {
+  savingCriteria.value = true
+  try {
+    const payload = criteriaForm.value.map((item) => ({
+      title: String(item.title || '').trim(),
+      desc: String(item.desc || '').trim(),
+      max: Number(item.max || 0),
+    }))
+
+    criteriaForm.value = await updateCriteriaConfig(payload)
+    setMessage('success', '评分细则已更新。')
+  } catch (error) {
+    setMessage('error', error.message)
+  } finally {
+    savingCriteria.value = false
   }
 }
 
@@ -573,7 +667,7 @@ async function handleDeleteSubmission() {
 
 async function loadAll() {
   setMessage('success', '')
-  await Promise.all([loadLesson(), loadUsersList(), loadSubmissions()])
+  await Promise.all([loadLesson(), loadCriteria(), loadUsersList(), loadSubmissions()])
 }
 
 onMounted(loadAll)

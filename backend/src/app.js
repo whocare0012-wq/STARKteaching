@@ -10,18 +10,21 @@ const {
   createUser,
   deleteSubmission,
   getLessonSettings,
+  getScoreCriteria,
   getSubmissionById,
   getUserByUsername,
   listSubmissions,
   listSubmissionSummaries,
   listSubmissionsForExport,
   listUsers,
+  replaceScoreCriteria,
   updateLessonSettings,
   updateUser,
 } = require('./db');
 const { requireAuth, requireSuperAdmin } = require('./middleware/auth');
 const {
   createUserSchema,
+  criteriaConfigSchema,
   lessonSettingsSchema,
   loginSchema,
   submissionSchema,
@@ -100,6 +103,36 @@ function buildSummaryExportRows(summaryWeeks) {
   );
 }
 
+function normalizeSubmissionCriteria(submittedCriteria = [], configuredCriteria = []) {
+  if (!configuredCriteria.length) {
+    throw new Error('当前未配置评分细则，请先在后台设置后再提交评分。');
+  }
+
+  if (submittedCriteria.length !== configuredCriteria.length) {
+    throw new Error('评分细则已更新，请刷新页面后重新填写评分。');
+  }
+
+  return configuredCriteria.map((criterion, index) => {
+    const submittedItem = submittedCriteria[index] || {};
+    const rawScore = Number(submittedItem.score);
+
+    if (!Number.isInteger(rawScore)) {
+      throw new Error(`请为“${criterion.title}”填写整数分数。`);
+    }
+
+    if (rawScore < 0 || rawScore > Number(criterion.max || 0)) {
+      throw new Error(`“${criterion.title}”的分数必须在 0 到 ${criterion.max} 之间。`);
+    }
+
+    return {
+      title: criterion.title,
+      desc: criterion.desc,
+      max: Number(criterion.max || 0),
+      score: rawScore,
+    };
+  });
+}
+
 function createApp() {
   const app = express();
 
@@ -160,6 +193,7 @@ function createApp() {
     res.json({
       user: sanitizeSessionUser(req.user),
       lesson: getLessonSettings(),
+      criteria: getScoreCriteria(),
       today: getCurrentDateString(),
     });
   });
@@ -174,6 +208,7 @@ function createApp() {
     }
 
     const lesson = getLessonSettings();
+    const configuredCriteria = getScoreCriteria();
 
     if (!lesson.scoringEnabled) {
       return res.status(403).json({
@@ -188,8 +223,18 @@ function createApp() {
     }
 
     const payload = parsed.data;
+    let normalizedCriteria;
+
+    try {
+      normalizedCriteria = normalizeSubmissionCriteria(payload.criteria, configuredCriteria);
+    } catch (error) {
+      return res.status(400).json({
+        message: error.message || '评分细则校验失败，请刷新页面后重试。',
+      });
+    }
+
     const createdAt = new Date().toISOString();
-    const totalScore = payload.criteria.reduce(
+    const totalScore = normalizedCriteria.reduce(
       (sum, item) => sum + Number(item.score || 0),
       0,
     );
@@ -205,7 +250,7 @@ function createApp() {
         round: lesson.currentRound,
         highlights: payload.highlights,
         suggestions: payload.suggestions,
-        criteria: payload.criteria,
+        criteria: normalizedCriteria,
         createdAt,
       });
 
@@ -225,7 +270,7 @@ function createApp() {
         round: lesson.currentRound,
         highlights: payload.highlights,
         suggestions: payload.suggestions,
-        criteria: payload.criteria,
+        criteria: normalizedCriteria,
         totalScore,
         snapshotFilename,
         createdAt,
@@ -250,6 +295,10 @@ function createApp() {
     res.json(getLessonSettings());
   });
 
+  app.get('/api/admin/criteria', requireAuth, requireSuperAdmin, (_req, res) => {
+    res.json(getScoreCriteria());
+  });
+
   app.put('/api/admin/lesson', requireAuth, requireSuperAdmin, (req, res) => {
     const parsed = lessonSettingsSchema.safeParse(req.body);
 
@@ -260,6 +309,18 @@ function createApp() {
     }
 
     return res.json(updateLessonSettings(parsed.data));
+  });
+
+  app.put('/api/admin/criteria', requireAuth, requireSuperAdmin, (req, res) => {
+    const parsed = criteriaConfigSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: parsed.error.issues[0]?.message || '评分细则配置不正确。',
+      });
+    }
+
+    return res.json(replaceScoreCriteria(parsed.data));
   });
 
   app.get('/api/admin/users', requireAuth, requireSuperAdmin, (_req, res) => {

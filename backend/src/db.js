@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 const { adminPassword, adminUsername, databasePath, snapshotsDir } = require('./config');
+const defaultCriteria = require('./defaultCriteria');
 const { hashPassword } = require('./utils/password');
 
 fs.mkdirSync(path.dirname(databasePath), { recursive: true });
@@ -64,6 +65,14 @@ db.exec(`
     snapshot_filename TEXT NOT NULL,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS score_criteria (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sort_order INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    max_score INTEGER NOT NULL
+  );
 `);
 
 ensureColumn('site_settings', 'current_teacher', "TEXT NOT NULL DEFAULT ''");
@@ -115,6 +124,31 @@ function seedSuperAdmin() {
 
 seedSuperAdmin();
 
+function seedDefaultCriteria() {
+  const existing = db.prepare('SELECT COUNT(1) AS count FROM score_criteria').get();
+
+  if (existing?.count > 0) {
+    return;
+  }
+
+  const insert = db.prepare(
+    `
+      INSERT INTO score_criteria (sort_order, title, description, max_score)
+      VALUES (?, ?, ?, ?)
+    `,
+  );
+
+  const transaction = db.transaction((criteriaList) => {
+    criteriaList.forEach((item, index) => {
+      insert.run(index + 1, item.title, item.desc, item.max);
+    });
+  });
+
+  transaction(defaultCriteria);
+}
+
+seedDefaultCriteria();
+
 function normalizeUser(row) {
   if (!row) {
     return null;
@@ -138,6 +172,15 @@ function normalizeSubmission(row) {
   return {
     ...row,
     criteria: JSON.parse(row.criteria_json),
+  };
+}
+
+function normalizeCriteria(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    desc: row.description,
+    max: row.max_score,
   };
 }
 
@@ -207,6 +250,39 @@ function getUserById(id) {
     ...normalizeUser(row),
     passwordHash: row.password_hash,
   };
+}
+
+function getScoreCriteria() {
+  return db
+    .prepare(
+      `
+        SELECT id, title, description, max_score
+        FROM score_criteria
+        ORDER BY sort_order ASC, id ASC
+      `,
+    )
+    .all()
+    .map(normalizeCriteria);
+}
+
+function replaceScoreCriteria(criteriaList) {
+  const clear = db.prepare('DELETE FROM score_criteria');
+  const insert = db.prepare(
+    `
+      INSERT INTO score_criteria (sort_order, title, description, max_score)
+      VALUES (?, ?, ?, ?)
+    `,
+  );
+
+  const transaction = db.transaction((items) => {
+    clear.run();
+    items.forEach((item, index) => {
+      insert.run(index + 1, item.title, item.desc, item.max);
+    });
+  });
+
+  transaction(criteriaList);
+  return getScoreCriteria();
 }
 
 function getUserByUsername(username) {
@@ -634,6 +710,7 @@ module.exports = {
   createUser,
   deleteSubmission,
   getLessonSettings,
+  getScoreCriteria,
   getSubmissionById,
   getUserById,
   getUserByUsername,
@@ -641,6 +718,7 @@ module.exports = {
   listSubmissionSummaries,
   listSubmissionsForExport,
   listUsers,
+  replaceScoreCriteria,
   updateLessonSettings,
   updateUser,
 };

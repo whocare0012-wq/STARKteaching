@@ -37,16 +37,18 @@ function escapeHtml(value = '') {
     .replaceAll("'", '&#39;');
 }
 
-function getScoreLevel(totalScore) {
-  if (totalScore >= 90) {
+function getScoreLevel(totalScore, maxScore = 100) {
+  const ratio = maxScore > 0 ? totalScore / maxScore : 0;
+
+  if (ratio >= 0.9) {
     return { text: '优秀', color: '#0f766e' };
   }
 
-  if (totalScore >= 80) {
+  if (ratio >= 0.8) {
     return { text: '良好', color: '#2563eb' };
   }
 
-  if (totalScore >= 70) {
+  if (ratio >= 0.7) {
     return { text: '合格', color: '#d97706' };
   }
 

@@ -58,6 +58,17 @@ export function updateLessonSettings(payload) {
   })
 }
 
+export function getCriteriaConfig() {
+  return request('/api/admin/criteria')
+}
+
+export function updateCriteriaConfig(payload) {
+  return request('/api/admin/criteria', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function getUsers() {
   return request('/api/admin/users')
 }
